@@ -1,0 +1,35 @@
+### Get account
+GET http://localhost:5000/api/account
+
+### Calculate lot size for $285 @ 10% risk, 20-pt SL
+POST http://localhost:5000/api/account/lot-size
+Content-Type: application/json
+
+{ "stopLossPoints": 20 }
+
+### Create an open trade
+POST http://localhost:5000/api/trades
+Content-Type: application/json
+
+{
+  "direction": "Buy",
+  "entry": 4430,
+  "stopLoss": 4380,
+  "takeProfit": 4500,
+  "notes": "EMA20>EMA50 setup"
+}
+
+### Close that trade via a new POST (or PATCH — Phase 2)
+GET http://localhost:5000/api/trades
+
+### Tax estimate on $10,000 annual profit
+POST http://localhost:5000/api/account/tax-estimate
+Content-Type: application/json
+
+{ "annualProfit": 10000 }
+
+### Projection: $500/mo P/L, 30% withdrawal
+POST http://localhost:5000/api/account/projection
+Content-Type: application/json
+
+{ "monthlyPnL": 500 }
