@@ -43,6 +43,7 @@ export function Journal() {
   const [editNotes, setEditNotes] = useState('');
   const [importing, setImporting] = useState(false);
   const [snack, setSnack] = useState<string | null>(null);
+  const [importSince, setImportSince] = useState('2026-08-24');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = () =>
@@ -128,7 +129,7 @@ export function Journal() {
     setImporting(true);
     setError(null);
     try {
-      const result = await importTradesFile(file);
+      const result = await importTradesFile(file, importSince || undefined);
       load();
       setSnack(
         `Imported ${result.inserted} trade(s).` +
@@ -181,6 +182,15 @@ export function Journal() {
             accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             style={{ display: 'none' }}
             onChange={handleFilePick}
+          />
+          <TextField
+            size="small"
+            type="date"
+            label="Import from"
+            value={importSince}
+            onChange={(e) => setImportSince(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 160 }}
           />
           <Button
             variant="outlined"
@@ -435,4 +445,4 @@ export function Journal() {
       />
     </Box>
   );
-}
+}

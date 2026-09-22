@@ -210,11 +210,15 @@ export interface ImportResult {
   newBalance: number;
 }
 
-export async function importTradesFile(file: File): Promise<ImportResult> {
+export async function importTradesFile(
+  file: File,
+  since?: string
+): Promise<ImportResult> {
   const fd = new FormData();
   fd.append('file', file);
+  if (since) fd.append('since', since);
   const { data } = await api.post<ImportResult>('/trades/import', fd, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return data;
-}
+}

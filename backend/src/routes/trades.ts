@@ -92,9 +92,17 @@ router.post('/import', upload.single('file'), async (req, res) => {
       });
     }
 
+    // multer puts non-file fields on req.body even for multipart/form-data
+    const sinceRaw = (req.body?.since as string | undefined)?.trim();
+    const sinceDate = sinceRaw ? new Date(sinceRaw) : null;
+    if (sinceRaw && sinceDate && isNaN(sinceDate.getTime())) {
+      return res.status(400).json({ error: `Invalid "since" date: "${sinceRaw}"` });
+    }
+
     const { trades: parsed, errors } = parseTradesAuto(
       req.file.buffer,
-      req.file.originalname
+      req.file.originalname,
+      sinceDate
     );
 
     if (parsed.length === 0) {
@@ -123,11 +131,22 @@ router.post('/import', upload.single('file'), async (req, res) => {
       let balanceAfter: number | undefined;
 
       if (t.closePrice != null) {
-        pnl =
-          t.direction === 'Buy'
-            ? (t.closePrice - t.entry) * t.lotSize * 100
-            : (t.entry - t.closePrice) * t.lotSize * 100;
-        const totalPnl = pnl + (t.swapFee ?? 0);
+        // When the parser already knows the broker's own realized profit
+        // for this trade (e.g. reconstructed from an MT5 Deals ledger),
+        // use that directly rather than re-deriving it from entry/close —
+        // it's ground truth and avoids compounding rounding drift across
+        // a large import.
+        let totalPnl: number;
+        if (t.profit != null) {
+          totalPnl = t.profit;
+          pnl = totalPnl - (t.swapFee ?? 0);
+        } else {
+          pnl =
+            t.direction === 'Buy'
+              ? (t.closePrice - t.entry) * t.lotSize * 100
+              : (t.entry - t.closePrice) * t.lotSize * 100;
+          totalPnl = pnl + (t.swapFee ?? 0);
+        }
 
         if (t.takeProfit != null && Math.abs(t.closePrice - t.takeProfit) < 0.05) {
           result = 'Win';
@@ -388,4 +407,4 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-export default router;
+export default router;
