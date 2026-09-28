@@ -1,0 +1,62 @@
+services:
+  # ---- Backend: Express API, built from the existing Dockerfile ----
+  - type: web
+    name: gold-dashboard-backend
+    runtime: docker
+    plan: starter
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "5000"
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: TAX_RATE
+        value: "0.41"
+      # Locked down by default — see backend/src/routes/auth.ts. Flip to
+      # "true" in the Render dashboard only for the one deploy where you
+      # need to create your real account, then set it back to "false"
+      # and redeploy.
+      - key: ALLOW_REGISTRATION
+        value: "false"
+      # Your live frontend origin(s), comma-separated. Must be the exact
+      # https://... origin the browser sends, no trailing slash.
+      - key: CORS_ORIGINS
+        value: https://app.goldholdings.co.za
+      # Fill these in from the Render dashboard after the service is
+      # created (sync: false means Render won't overwrite what you type
+      # in there, and this file never carries the actual secret values).
+      - key: MONGO_URI
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GOLD_API_KEY
+        sync: false
+
+  # ---- Frontend: static Vite build, served by Render's own CDN ----
+  # (Using Render's Static Site rather than the repo's nginx Dockerfile —
+  # simpler, free, and Render's static hosting already does gzip/caching.)
+  - type: web
+    name: gold-dashboard-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # Point this at the backend service's Render URL once it exists
+      # (Render shows it as https://gold-dashboard-backend.onrender.com),
+      # or your api.goldholdings.co.za if you set one up.
+      - key: VITE_API_URL
+        value: https://gold-dashboard-backend.onrender.com/api
+      - key: VITE_ALLOW_REGISTRATION
+        value: "false"
