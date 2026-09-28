@@ -18,6 +18,15 @@ function signToken(userId: string): string {
 
 router.post('/register', async (req, res) => {
   try {
+    // Every account shares ONE global Trade/Account/Goal/etc. dataset — this
+    // app has no per-user data scoping, so a second registered user would
+    // see and be able to edit the same real trading/financial records, not
+    // a separate account. Registration is therefore locked down by default;
+    // set ALLOW_REGISTRATION=true only transiently, to create the single
+    // real account, then unset it.
+    if (process.env.ALLOW_REGISTRATION !== 'true') {
+      return res.status(403).json({ error: 'Registration is disabled on this deployment.' });
+    }
     const { email, password, name } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password required' });
@@ -65,4 +74,4 @@ router.get('/me', async (_req, res) => {
   res.json({ message: 'me endpoint' });
 });
 
-export default router;
+export default router;

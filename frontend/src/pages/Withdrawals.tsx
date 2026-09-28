@@ -3,13 +3,14 @@ import {
   Box, Paper, Typography, Button, Grid, TextField, MenuItem,
   Table, TableBody, TableCell, TableHead, TableRow, Chip, Alert,
 } from '@mui/material';
-import type { Withdrawal, Account } from '../api/client';
+import type { Withdrawal, Account, WithdrawalAllocation } from '../api/client';
 import { getWithdrawals, createWithdrawal, getAccount } from '../api/client';
 
 interface FormState {
   amount: string;
   type: 'Withdrawal' | 'Deposit';
   notes: string;
+  allocation: WithdrawalAllocation | '';
 }
 
 export function Withdrawals() {
@@ -19,6 +20,7 @@ export function Withdrawals() {
     amount: '',
     type: 'Withdrawal',
     notes: '',
+    allocation: '',
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -35,6 +37,16 @@ export function Withdrawals() {
 
   useEffect(() => { load(); }, []);
 
+  const allocationTotals: [string, number][] = (() => {
+    const totals = new Map<string, number>();
+    for (const w of list) {
+      if (w.type !== 'Withdrawal') continue;
+      const key = w.allocation ?? 'Not tracked';
+      totals.set(key, (totals.get(key) ?? 0) + w.amount);
+    }
+    return [...totals.entries()];
+  })();
+
   const submit = async () => {
     try {
       setError(null);
@@ -42,8 +54,9 @@ export function Withdrawals() {
         amount: parseFloat(form.amount),
         type: form.type,
         notes: form.notes,
+        allocation: form.type === 'Withdrawal' && form.allocation ? form.allocation : null,
       });
-      setForm({ amount: '', type: 'Withdrawal', notes: '' });
+      setForm({ amount: '', type: 'Withdrawal', notes: '', allocation: '' });
       load();
     } catch (e) {
       const err = e as {
@@ -88,6 +101,21 @@ export function Withdrawals() {
               onChange={(e) => setForm({ ...form, amount: e.target.value })}
               sx={{ mb: 2 }}
             />
+            {form.type === 'Withdrawal' && (
+              <TextField
+                fullWidth
+                select
+                label="Where did it go? (optional)"
+                value={form.allocation}
+                onChange={(e) => setForm({ ...form, allocation: e.target.value as WithdrawalAllocation | '' })}
+                sx={{ mb: 2 }}
+              >
+                <MenuItem value="">Not tracked</MenuItem>
+                <MenuItem value="Reinvested">Reinvested (other venture)</MenuItem>
+                <MenuItem value="Saved">Saved</MenuItem>
+                <MenuItem value="Other">Other / personal use</MenuItem>
+              </TextField>
+            )}
             <TextField
               fullWidth
               label="Notes"
@@ -125,6 +153,20 @@ export function Withdrawals() {
               </Typography>
             </Paper>
           )}
+
+          {allocationTotals.length > 0 && (
+            <Paper sx={{ p: 3, mt: 2 }}>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                TREASURY — WHERE WITHDRAWALS WENT
+              </Typography>
+              {allocationTotals.map(([label, total]) => (
+                <Box key={label} sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+                  <Typography variant="body2">{label}</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>${total.toFixed(2)}</Typography>
+                </Box>
+              ))}
+            </Paper>
+          )}
         </Grid>
 
         <Grid size={{ xs: 12, md: 8 }}>
@@ -135,6 +177,7 @@ export function Withdrawals() {
                   <TableCell>Date</TableCell>
                   <TableCell>Type</TableCell>
                   <TableCell align="right">Amount</TableCell>
+                  <TableCell>Allocation</TableCell>
                   <TableCell>Notes</TableCell>
                 </TableRow>
               </TableHead>
@@ -150,13 +193,14 @@ export function Withdrawals() {
                       />
                     </TableCell>
                     <TableCell align="right">${w.amount.toFixed(2)}</TableCell>
+                    <TableCell>{w.allocation ?? '—'}</TableCell>
                     <TableCell>{w.notes ?? '—'}</TableCell>
                   </TableRow>
                 ))}
                 {list.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={4}
+                      colSpan={5}
                       align="center"
                       sx={{ py: 4, color: 'text.secondary' }}
                     >
@@ -171,4 +215,4 @@ export function Withdrawals() {
       </Grid>
     </Box>
   );
-}
+}

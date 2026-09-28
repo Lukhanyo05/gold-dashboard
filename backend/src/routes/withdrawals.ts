@@ -15,7 +15,7 @@ router.get('/', async (_req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { amount, type, notes } = req.body;
+    const { amount, type, notes, allocation } = req.body;
     const account = await getOrCreateAccount();
 
     const entry = await Withdrawal.create({
@@ -23,6 +23,8 @@ router.post('/', async (req, res) => {
       type,
       notes,
       taxReserve: 0,
+      // Allocation only makes sense for an actual withdrawal, not a deposit.
+      allocation: type === 'Withdrawal' && allocation ? allocation : null,
     });
 
     if (type === 'Withdrawal') {
@@ -43,4 +45,4 @@ router.post('/', async (req, res) => {
   }
 });
 
-export default router;
+export default router;

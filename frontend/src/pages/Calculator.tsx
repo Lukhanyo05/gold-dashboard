@@ -9,7 +9,9 @@ import { useGoldPrice } from '../hooks/useGoldPrice';
 export function Calculator() {
   const [account, setAccount] = useState<Account | null>(null);
   const [slPoints, setSlPoints] = useState(20);
+  const [tpPoints, setTpPoints] = useState(40);
   const [riskPct, setRiskPct] = useState(10);
+  const [winRatePct, setWinRatePct] = useState(50);
   const [result, setResult] = useState<LotSizingResult | null>(null);
   const { price: livePrice } = useGoldPrice();
 
@@ -29,6 +31,20 @@ export function Calculator() {
   if (!account) return null;
 
   const pointsTable = [1, 5, 10, 20, 50, 100, 200];
+
+  // Reward/risk math — this is the "best profit" side of the calculator:
+  // given the SL/TP distances above, how does the trade's risk:reward
+  // actually stack up, and what win rate do you need just to break even?
+  const rewardUSD = result ? result.dollarPerPoint * tpPoints : 0;
+  const riskedUSD = result ? result.riskedUSD : 0;
+  const rrRatio = slPoints > 0 ? tpPoints / slPoints : 0;
+  // breakeven win rate: winRate * reward = (1 - winRate) * risk
+  //   => winRate = risk / (risk + reward)
+  const breakevenWinRatePct =
+    riskedUSD + rewardUSD > 0 ? (riskedUSD / (riskedUSD + rewardUSD)) * 100 : 0;
+  const winFrac = winRatePct / 100;
+  const expectedValueUSD = winFrac * rewardUSD - (1 - winFrac) * riskedUSD;
+  const edgeVsBreakeven = winRatePct - breakevenWinRatePct;
 
   return (
     <Box>
@@ -65,6 +81,23 @@ export function Calculator() {
               type="number"
               value={slPoints}
               onChange={(e) => setSlPoints(parseFloat(e.target.value) || 0)}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Take Profit Distance ($ move on gold)"
+              type="number"
+              value={tpPoints}
+              onChange={(e) => setTpPoints(parseFloat(e.target.value) || 0)}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Expected Win Rate (%)"
+              type="number"
+              value={winRatePct}
+              onChange={(e) => setWinRatePct(parseFloat(e.target.value) || 0)}
+              helperText="Your actual win rate for this setup — used to estimate expected value"
             />
           </Paper>
 
@@ -135,8 +168,58 @@ export function Calculator() {
               </Grid>
             )}
           </Paper>
+
+          {result && (
+            <Paper sx={{ p: 3, mt: 2 }}>
+              <Typography variant="h6" sx={{ mb: 2 }}>Risk vs. Reward</Typography>
+              <Grid container spacing={3}>
+                <Grid size={{ xs: 6 }}>
+                  <Typography variant="caption" color="text.secondary">REWARD:RISK</Typography>
+                  <Typography
+                    variant="h4"
+                    color={rrRatio >= 2 ? 'success.main' : rrRatio >= 1 ? 'warning.main' : 'error.main'}
+                  >
+                    {rrRatio.toFixed(2)} : 1
+                  </Typography>
+                </Grid>
+                <Grid size={{ xs: 6 }}>
+                  <Typography variant="caption" color="text.secondary">$ POTENTIAL REWARD</Typography>
+                  <Typography variant="h4" color="success.main">${rewardUSD.toFixed(2)}</Typography>
+                </Grid>
+                <Grid size={{ xs: 6 }}>
+                  <Typography variant="caption" color="text.secondary">BREAKEVEN WIN RATE</Typography>
+                  <Typography variant="h5">{breakevenWinRatePct.toFixed(1)}%</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Win at least this often just to avoid losing money
+                  </Typography>
+                </Grid>
+                <Grid size={{ xs: 6 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    EXPECTED VALUE / TRADE (at {winRatePct}% win rate)
+                  </Typography>
+                  <Typography
+                    variant="h5"
+                    color={expectedValueUSD >= 0 ? 'success.main' : 'error.main'}
+                  >
+                    {expectedValueUSD >= 0 ? '+' : ''}${expectedValueUSD.toFixed(2)}
+                  </Typography>
+                  <Typography variant="caption" color={edgeVsBreakeven >= 0 ? 'success.main' : 'error.main'}>
+                    {edgeVsBreakeven >= 0 ? '+' : ''}
+                    {edgeVsBreakeven.toFixed(1)}pts vs. breakeven win rate
+                  </Typography>
+                </Grid>
+              </Grid>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                {rrRatio >= 2
+                  ? 'Good reward:risk — even a sub-50% win rate can be profitable here.'
+                  : rrRatio >= 1
+                  ? 'Even reward:risk — you need a win rate above 50% to be profitable long-term.'
+                  : 'Poor reward:risk — you are risking more than you stand to gain. Consider widening your take profit or tightening your stop.'}
+              </Typography>
+            </Paper>
+          )}
         </Grid>
       </Grid>
     </Box>
   );
-}
+}

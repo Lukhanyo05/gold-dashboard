@@ -14,8 +14,13 @@ const WithdrawalSchema = new Schema<IWithdrawal>(
     },
     taxReserve: { type: Number, default: 0 },
     notes: { type: String, trim: true, maxlength: 500 },
+    allocation: {
+      type: String,
+      enum: ['Reinvested', 'Saved', 'Other'],
+      default: null,
+    },
   },
   { timestamps: true }
 );
 
-export const Withdrawal = model<IWithdrawal>('Withdrawal', WithdrawalSchema);
+export const Withdrawal = model<IWithdrawal>('Withdrawal', WithdrawalSchema);

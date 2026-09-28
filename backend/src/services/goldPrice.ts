@@ -1,14 +1,17 @@
 import WebSocket from 'ws';
 import { redis } from './redis';
+import { recordPrice, getSentiment, type Sentiment } from './priceSentiment';
 
 const BINANCE_WS = 'wss://stream.binance.com:9443/ws/paxgusdt@trade';
 const PRICE_KEY = 'gold:price';
 const PRICE_TTL = 30; // seconds
+const SENTIMENT_SYMBOL = 'GOLD';
 
 export interface GoldPrice {
   price: number;
   source: 'paxg' | 'cache';
   updatedAt: string;
+  sentiment?: Sentiment | null;
 }
 
 let lastPrice: number | null = null;
@@ -28,6 +31,7 @@ function connect() {
       const price = parseFloat(msg.p);
       if (!isNaN(price) && price > 0) {
         lastPrice = price;
+        recordPrice(SENTIMENT_SYMBOL, price);
         await redis.setex(
           PRICE_KEY,
           PRICE_TTL,
@@ -67,10 +71,12 @@ export function startGoldPriceFeed() {
 }
 
 export async function getLatestGoldPrice(): Promise<GoldPrice | null> {
+  const sentiment = getSentiment(SENTIMENT_SYMBOL);
+
   // Try cache first
   const cached = await redis.get(PRICE_KEY);
   if (cached) {
-    return JSON.parse(cached) as GoldPrice;
+    return { ...(JSON.parse(cached) as GoldPrice), sentiment };
   }
 
   // Fallback: memory
@@ -79,6 +85,7 @@ export async function getLatestGoldPrice(): Promise<GoldPrice | null> {
       price: lastPrice,
       source: 'cache',
       updatedAt: new Date().toISOString(),
+      sentiment,
     };
   }
 
@@ -88,4 +95,4 @@ export async function getLatestGoldPrice(): Promise<GoldPrice | null> {
 export function stopGoldPriceFeed() {
   if (ws) ws.close();
   if (reconnectTimer) clearTimeout(reconnectTimer);
-}
+}

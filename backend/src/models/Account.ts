@@ -14,8 +14,10 @@ const AccountSchema = new Schema<IAccount>(
     taxReserve: { type: Number, default: 0 },
     totalWithdrawn: { type: Number, default: 0 },
     totalDeposited: { type: Number, default: 0 },
+    maxDailyLossPct: { type: Number, default: null, min: 0, max: 1 },
+    maxWeeklyLossPct: { type: Number, default: null, min: 0, max: 1 },
   },
   { timestamps: true }
 );
 
-export const Account = model<IAccount>('Account', AccountSchema);
+export const Account = model<IAccount>('Account', AccountSchema);

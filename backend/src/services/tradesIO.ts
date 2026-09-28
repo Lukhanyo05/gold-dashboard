@@ -2,9 +2,12 @@
 import { parse } from 'csv-parse/sync';
 import * as XLSX from 'xlsx';
 
+export type TradeSymbol = 'GOLD' | 'ETHUSD';
+
 export interface ImportedTrade {
   tradeNumber?: number;
   date: string;
+  symbol: TradeSymbol;
   direction: 'Buy' | 'Sell';
   entry: number;
   stopLoss?: number | null;
@@ -28,6 +31,21 @@ export interface ParseResult {
 }
 
 const norm = (s: string) => String(s).toLowerCase().replace(/[\s_]+/g, '');
+
+/**
+ * This journal supports GOLD (XAUUSD, 100oz/lot contract) and ETHUSD.
+ * Import-time P&L for both always comes from the broker's own reported
+ * Profit (see parseMT5Deals / parseMT5Positions notes) rather than a
+ * recomputed price-difference formula, so both reconcile exactly to the
+ * broker's numbers on import regardless of each symbol's contract math.
+ * Any other symbol is skipped rather than guessed at.
+ */
+function resolveSymbol(raw: unknown): TradeSymbol | null {
+  const s = String(raw ?? '').toUpperCase().replace(/[\s_/]+/g, '');
+  if (s === 'GOLD' || s === 'XAUUSD') return 'GOLD';
+  if (s === 'ETHUSD' || s === 'ETHUSDT') return 'ETHUSD';
+  return null;
+}
 
 function parseFlexibleDate(input: unknown): Date | null {
   if (input == null || input === '') return null;
@@ -76,6 +94,7 @@ export function normalizeRows(rows: Record<string, any>[]): ParseResult {
     for (const k of Object.keys(raw)) r[norm(k)] = raw[k];
 
     const date      = r.date || r.datetime || r.opened || r.opentime;
+    const symbolRaw = r.symbol || r.instrument || r.pair || 'GOLD';
     const direction = String(r.direction || r.side || r.type || '').toLowerCase();
     const entryRaw  = r.entry ?? r.entryprice ?? r.open ?? r.openprice;
     const lotRaw    = r.lotsize ?? r.lot ?? r.size ?? r.volume ?? r.quantity ?? '0.01';
@@ -116,8 +135,17 @@ export function normalizeRows(rows: Record<string, any>[]): ParseResult {
       return;
     }
 
+    const symbol = resolveSymbol(symbolRaw);
+    if (!symbol) {
+      errors.push(
+        `Line ${lineNo}: skipped "${symbolRaw}" — this journal only supports GOLD and ETHUSD`
+      );
+      return;
+    }
+
     trades.push({
       date: parsedDate.toISOString(),
+      symbol,
       direction: direction === 'buy' ? 'Buy' : 'Sell',
       entry,
       stopLoss: toNumOrNull(slRaw),
@@ -165,26 +193,70 @@ export function parseTradesCSV(csvText: string): ParseResult {
  * Because the two "Time" / "Price" headers are identical strings, mapping
  * rows to a name-keyed object (what the generic path below does) silently
  * drops the open time/price — the close-leg values just overwrite them.
- * This reads the row by column position instead, and stops as soon as it
- * hits the next section ("Orders", "Deals", "Working Orders", …) so those
- * pending-order / raw-fill rows never get parsed as closed trades.
+ * This reads columns by NAME, resolved to positions once from the header
+ * row (see `headerIndexMap`) — not by fixed position — because XM has been
+ * seen to change the export layout (e.g. adding a "Position"/"Deal" ticket
+ * ID column) between report downloads, which would silently shift every
+ * fixed-position read by one. It stops as soon as it hits the next section
+ * ("Orders", "Deals", "Working Orders", …) so those pending-order / raw-fill
+ * rows never get parsed as closed trades.
  */
+
+/**
+ * Maps each normalized header name to every column index it appears at
+ * (in order), so a report format that repeats a name (open/close "Time",
+ * open/close "Price") or inserts an extra column can still be read
+ * correctly by name instead of assuming a fixed position.
+ */
+function headerIndexMap(headers: string[]): Map<string, number[]> {
+  const map = new Map<string, number[]>();
+  headers.forEach((h, i) => {
+    const key = norm(h);
+    if (!key) return;
+    const arr = map.get(key) ?? [];
+    arr.push(i);
+    map.set(key, arr);
+  });
+  return map;
+}
+
 function isMT5PositionsHeader(headers: string[]): boolean {
-  const h = headers.map((s) => s.toLowerCase().trim());
+  const idx = headerIndexMap(headers);
   return (
-    h[0] === 'time' &&
-    h[1] === 'symbol' &&
-    h[2] === 'type' &&
-    h[3] === 'volume' &&
-    h[4] === 'price' &&
-    h[7] === 'time' &&
-    h[8] === 'price'
+    (idx.get('time')?.length ?? 0) >= 2 &&
+    (idx.get('price')?.length ?? 0) >= 2 &&
+    idx.has('symbol') &&
+    idx.has('type') &&
+    idx.has('volume')
   );
 }
 
 function parseMT5Positions(raw: any[][], headerRowIdx: number): ParseResult {
   const errors: string[] = [];
   const trades: ImportedTrade[] = [];
+
+  const headers = raw[headerRowIdx].map((h: any) =>
+    String(h ?? '').replace(/\n/g, ' ').trim()
+  );
+  const idx = headerIndexMap(headers);
+  const [openTimeCol, closeTimeCol] = idx.get('time') ?? [];
+  const [openPriceCol, closePriceCol] = idx.get('price') ?? [];
+  const symbolCol = idx.get('symbol')?.[0];
+  const typeCol = idx.get('type')?.[0];
+  const volumeCol = idx.get('volume')?.[0];
+  const slCol = idx.get('s/l')?.[0];
+  const tpCol = idx.get('t/p')?.[0];
+  const commissionCol = idx.get('commission')?.[0];
+  const swapCol = idx.get('swap')?.[0];
+  const profitCol = idx.get('profit')?.[0];
+
+  if (
+    openTimeCol == null || closeTimeCol == null ||
+    openPriceCol == null || closePriceCol == null ||
+    symbolCol == null || typeCol == null || volumeCol == null
+  ) {
+    return { trades: [], errors: ['Positions section header did not match the expected MT5 layout — columns could not be located by name'] };
+  }
 
   for (let i = headerRowIdx + 1; i < raw.length; i++) {
     const row = raw[i] ?? [];
@@ -195,10 +267,17 @@ function parseMT5Positions(raw: any[][], headerRowIdx: number): ParseResult {
     if (nonEmpty <= 3) break;
 
     const lineNo = i + 1;
-    const [
-      openTime, symbol, type, volume, price,
-      sl, tp, closeTime, closePrice, commission, swap,
-    ] = row;
+    const openTime = row[openTimeCol];
+    const symbol = row[symbolCol];
+    const type = row[typeCol];
+    const volume = row[volumeCol];
+    const price = row[openPriceCol];
+    const sl = slCol != null ? row[slCol] : null;
+    const tp = tpCol != null ? row[tpCol] : null;
+    const closeTime = row[closeTimeCol];
+    const closePrice = row[closePriceCol];
+    const commission = commissionCol != null ? row[commissionCol] : 0;
+    const swap = swapCol != null ? row[swapCol] : 0;
 
     const direction = String(type ?? '').toLowerCase().trim();
     if (direction !== 'buy' && direction !== 'sell') {
@@ -206,16 +285,12 @@ function parseMT5Positions(raw: any[][], headerRowIdx: number): ParseResult {
       break;
     }
 
-    // This dashboard's P&L, lot-sizing and risk math all assume gold's
-    // 100oz-per-lot contract (verified: matches XM's reported Profit to
-    // the cent for GOLD rows). A broker report can include other symbols
-    // if the same account trades them — importing those as gold would
-    // silently produce a wrong balance, so they're skipped and reported
-    // instead of guessed at.
-    const symbolStr = String(symbol ?? '').toUpperCase().trim();
-    if (symbolStr !== 'GOLD' && symbolStr !== 'XAUUSD') {
+    // This journal supports GOLD and ETHUSD. Any other symbol on the same
+    // account is skipped and reported rather than guessed at.
+    const resolvedSymbol = resolveSymbol(symbol);
+    if (!resolvedSymbol) {
       errors.push(
-        `Line ${lineNo}: skipped ${symbolStr || 'unknown symbol'} trade — this journal only supports GOLD (its P&L math assumes gold's contract size)`
+        `Line ${lineNo}: skipped ${String(symbol ?? '').trim() || 'unknown symbol'} trade — this journal only supports GOLD and ETHUSD`
       );
       continue;
     }
@@ -239,9 +314,16 @@ function parseMT5Positions(raw: any[][], headerRowIdx: number): ParseResult {
     const commissionNum = toNumOrNull(commission) ?? 0;
     const swapNum = toNumOrNull(swap) ?? 0;
     const closeTimeParsed = parseFlexibleDate(closeTime);
+    // Use the broker's own reported Profit when the report includes it —
+    // ground truth, and required for ETHUSD (whose P&L per point isn't a
+    // clean multiplier the way GOLD's is). Falls back to a price-diff
+    // recompute downstream only when this column is absent.
+    const profitRaw = profitCol != null ? row[profitCol] : null;
+    const profitNum = toNumOrNull(profitRaw);
 
     trades.push({
       date: parsedDate.toISOString(),
+      symbol: resolvedSymbol,
       direction: direction === 'buy' ? 'Buy' : 'Sell',
       entry,
       stopLoss: toNumOrNull(sl),
@@ -249,6 +331,7 @@ function parseMT5Positions(raw: any[][], headerRowIdx: number): ParseResult {
       closePrice: toNumOrNull(closePrice),
       lotSize,
       swapFee: Math.round((swapNum + commissionNum) * 100) / 100,
+      ...(profitNum != null ? { profit: profitNum } : {}),
       notes: [symbol, closeTimeParsed ? `closed ${closeTimeParsed.toISOString()}` : null]
         .filter(Boolean)
         .join(' · '),
@@ -284,14 +367,14 @@ function parseMT5Positions(raw: any[][], headerRowIdx: number): ParseResult {
  * numbers even when a specific pairing is a reasonable guess.
  */
 function isMT5DealsHeader(headers: string[]): boolean {
-  const h = headers.map((s) => s.toLowerCase().trim());
+  const idx = headerIndexMap(headers);
   return (
-    h[0] === 'time' &&
-    h[1] === 'symbol' &&
-    h[2] === 'type' &&
-    h[3] === 'direction' &&
-    h[4] === 'volume' &&
-    h[5] === 'price'
+    idx.has('time') &&
+    idx.has('symbol') &&
+    idx.has('type') &&
+    idx.has('direction') &&
+    idx.has('volume') &&
+    idx.has('price')
   );
 }
 
@@ -307,26 +390,62 @@ function parseMT5Deals(raw: any[][], headerRowIdx: number): ParseResult {
   const trades: ImportedTrade[] = [];
   const skippedSymbols = new Map<string, number>();
 
-  // FIFO queues of still-open lots, one per (symbol, position-side).
-  const buyLots: OpenLot[] = [];
-  const sellLots: OpenLot[] = [];
+  // FIFO queues of still-open lots, one pair per symbol so a GOLD deal
+  // never gets matched against an open ETHUSD lot (or vice versa) when
+  // both symbols appear in the same Deals ledger.
+  const buyLotsBySymbol = new Map<TradeSymbol, OpenLot[]>();
+  const sellLotsBySymbol = new Map<TradeSymbol, OpenLot[]>();
+  const lotsFor = (sym: TradeSymbol, map: Map<TradeSymbol, OpenLot[]>): OpenLot[] => {
+    let arr = map.get(sym);
+    if (!arr) { arr = []; map.set(sym, arr); }
+    return arr;
+  };
+
+  const headers = raw[headerRowIdx].map((h: any) =>
+    String(h ?? '').replace(/\n/g, ' ').trim()
+  );
+  const idx = headerIndexMap(headers);
+  const timeCol = idx.get('time')?.[0];
+  const symbolCol = idx.get('symbol')?.[0];
+  const typeCol = idx.get('type')?.[0];
+  const directionCol = idx.get('direction')?.[0];
+  const volumeCol = idx.get('volume')?.[0];
+  const priceCol = idx.get('price')?.[0];
+  const commissionCol = idx.get('commission')?.[0];
+  const feeCol = idx.get('fee')?.[0];
+  const swapCol = idx.get('swap')?.[0];
+  const profitCol = idx.get('profit')?.[0];
+
+  if (
+    timeCol == null || symbolCol == null || typeCol == null ||
+    directionCol == null || volumeCol == null || priceCol == null
+  ) {
+    return { trades: [], errors: ['Deals section header did not match the expected MT5 layout — columns could not be located by name'] };
+  }
 
   for (let i = headerRowIdx + 1; i < raw.length; i++) {
     const row = raw[i] ?? [];
     const nonEmpty = row.filter((c) => c !== '' && c != null).length;
     if (nonEmpty <= 3) break; // next section boundary
 
-    const [
-      time, symbol, type, direction, volumeRaw, price,
-      , commission, fee, swap, profit,
-    ] = row;
+    const time = row[timeCol];
+    const symbol = row[symbolCol];
+    const type = row[typeCol];
+    const direction = row[directionCol];
+    const volumeRaw = row[volumeCol];
+    const price = row[priceCol];
+    const commission = commissionCol != null ? row[commissionCol] : 0;
+    const fee = feeCol != null ? row[feeCol] : 0;
+    const swap = swapCol != null ? row[swapCol] : 0;
+    const profit = profitCol != null ? row[profitCol] : 0;
 
     const typeStr = String(type ?? '').toLowerCase().trim();
     if (typeStr === 'balance' || typeStr === 'credit') continue; // deposits/bonuses, not trades
     if (typeStr !== 'buy' && typeStr !== 'sell') continue;
 
     const symbolStr = String(symbol ?? '').toUpperCase().trim();
-    if (symbolStr !== 'GOLD' && symbolStr !== 'XAUUSD') {
+    const resolvedSymbol = resolveSymbol(symbolStr);
+    if (!resolvedSymbol) {
       skippedSymbols.set(symbolStr, (skippedSymbols.get(symbolStr) ?? 0) + 1);
       continue;
     }
@@ -341,12 +460,12 @@ function parseMT5Deals(raw: any[][], headerRowIdx: number): ParseResult {
 
     const dirStr = String(direction ?? '').toLowerCase().trim();
     if (dirStr === 'in') {
-      (typeStr === 'buy' ? buyLots : sellLots).push({
+      lotsFor(resolvedSymbol, typeStr === 'buy' ? buyLotsBySymbol : sellLotsBySymbol).push({
         remaining: vol, price: priceNum, time, feePerLot,
       });
     } else if (dirStr === 'out') {
       // A closing "sell" deal nets against open buy lots, and vice versa.
-      const queue = typeStr === 'sell' ? buyLots : sellLots;
+      const queue = lotsFor(resolvedSymbol, typeStr === 'sell' ? buyLotsBySymbol : sellLotsBySymbol);
       const posDirection: 'Buy' | 'Sell' = typeStr === 'sell' ? 'Buy' : 'Sell';
       const profitPerLot = (toNumOrNull(profit) ?? 0) / vol;
       let remaining = vol;
@@ -357,6 +476,7 @@ function parseMT5Deals(raw: any[][], headerRowIdx: number): ParseResult {
 
         trades.push({
           date: (parseFlexibleDate(lot.time) ?? new Date(0)).toISOString(),
+          symbol: resolvedSymbol,
           direction: posDirection,
           entry: lot.price,
           stopLoss: null, // not present in a Deals ledger
@@ -384,15 +504,17 @@ function parseMT5Deals(raw: any[][], headerRowIdx: number): ParseResult {
   }
 
   for (const [sym, count] of skippedSymbols) {
-    errors.push(`Skipped ${count} ${sym} deal(s) — this journal only supports GOLD`);
+    errors.push(`Skipped ${count} ${sym} deal(s) — this journal only supports GOLD and ETHUSD`);
   }
 
-  const openBuy = buyLots.reduce((s, l) => s + l.remaining, 0);
-  const openSell = sellLots.reduce((s, l) => s + l.remaining, 0);
-  if (openBuy > 1e-6 || openSell > 1e-6) {
-    errors.push(
-      `${(openBuy + openSell).toFixed(2)} lot(s) of GOLD are still open (no matching close in this report) and were not imported`
-    );
+  for (const sym of new Set([...buyLotsBySymbol.keys(), ...sellLotsBySymbol.keys()])) {
+    const openBuy = (buyLotsBySymbol.get(sym) ?? []).reduce((s, l) => s + l.remaining, 0);
+    const openSell = (sellLotsBySymbol.get(sym) ?? []).reduce((s, l) => s + l.remaining, 0);
+    if (openBuy > 1e-6 || openSell > 1e-6) {
+      errors.push(
+        `${(openBuy + openSell).toFixed(2)} lot(s) of ${sym} are still open (no matching close in this report) and were not imported`
+      );
+    }
   }
 
   trades.sort((a, b) => +new Date(a.date) - +new Date(b.date));
@@ -437,13 +559,57 @@ export function parseTradesXlsx(buffer: Buffer): ParseResult {
   // A broker "Trade History Report" (MT5/MT4 — XM, Exness, IC Markets…) has
   // several sections, each a single-cell title row ("Positions", "Orders",
   // "Deals", "Working Orders", "Results") followed by its own header row.
-  // "Deals" is the complete raw fill history since the account opened;
-  // "Positions" (in this broker's export) only lists recently-closed
-  // positions, so prefer Deals when both are present so a full-history
-  // import doesn't miss anything — and doesn't also double-count the
-  // overlap by reading both.
+  //
+  // "Positions" is one row per closed position with the broker's own
+  // Profit/Swap/Commission already attached directly — no inference needed.
+  // "Deals" is the raw fill ledger; a closed position has to be reconstructed
+  // from it via FIFO lot-matching, which is only a best-effort approximation
+  // once a Hedge account has several overlapping same-symbol positions open
+  // in both directions at once, and was confirmed (against a real XM export)
+  // to badly miscount in exactly that case — Deals reconstructed $899.76 of
+  // total P&L for an account whose broker-reported Results total was $25.34,
+  // while Positions summed to that same $25.34 exactly. So Positions is
+  // preferred whenever it's present and looks complete; Deals is only the
+  // fallback for a report whose Positions section is genuinely partial (the
+  // "Total Trades" figure in the Results section, when present, is what
+  // decides "complete" — a broker that truly only lists recent positions
+  // there will fail this check and fall through to Deals as before).
   const sectionTitleAt = (title: string): number =>
     raw.findIndex((row) => String(row?.[0] ?? '').trim().toLowerCase() === title);
+
+  // Results section states the report's own trade count, e.g. a row like
+  // ['Total Trades:', null, null, 219, 'Short Trades (won %):', ...] — used
+  // only to sanity-check Positions' completeness, not as trade data itself.
+  const reportedTotalTrades = (): number | null => {
+    for (const row of raw) {
+      const labelIdx = row.findIndex(
+        (c) => String(c ?? '').trim().toLowerCase() === 'total trades:'
+      );
+      if (labelIdx === -1) continue;
+      for (let j = labelIdx + 1; j < row.length; j++) {
+        const n = toNumOrNull(row[j]);
+        if (n != null) return n;
+      }
+    }
+    return null;
+  };
+
+  const positionsSectionIdx = sectionTitleAt('positions');
+  let positionsResult: ParseResult | null = null;
+  if (positionsSectionIdx !== -1) {
+    const headerRowIdx = positionsSectionIdx + 1;
+    const headers = raw[headerRowIdx].map((h: any) =>
+      String(h ?? '').replace(/\n/g, ' ').trim()
+    );
+    if (isMT5PositionsHeader(headers)) {
+      positionsResult = parseMT5Positions(raw, headerRowIdx);
+      const reported = reportedTotalTrades();
+      // Allow a margin of 1 for a currently-open position with no close row.
+      if (reported == null || positionsResult.trades.length >= reported - 1) {
+        return positionsResult;
+      }
+    }
+  }
 
   const dealsSectionIdx = sectionTitleAt('deals');
   if (dealsSectionIdx !== -1) {
@@ -456,15 +622,14 @@ export function parseTradesXlsx(buffer: Buffer): ParseResult {
     }
   }
 
-  const positionsSectionIdx = sectionTitleAt('positions');
-  if (positionsSectionIdx !== -1) {
-    const headerRowIdx = positionsSectionIdx + 1;
-    const headers = raw[headerRowIdx].map((h: any) =>
-      String(h ?? '').replace(/\n/g, ' ').trim()
+  // Positions existed but looked incomplete and there was no Deals section
+  // to fall back to — better to return the partial Positions data (with a
+  // note) than nothing.
+  if (positionsResult) {
+    positionsResult.errors.push(
+      'Positions section looked shorter than the report\'s own Total Trades count, and no Deals section was available as a fallback — imported what was there.'
     );
-    if (isMT5PositionsHeader(headers)) {
-      return parseMT5Positions(raw, headerRowIdx);
-    }
+    return positionsResult;
   }
 
   // Find the header row: the first row with >= 4 non-empty cells
@@ -507,7 +672,7 @@ export function parseTradesXlsx(buffer: Buffer): ParseResult {
 
 export function tradesToCSV(trades: any[]): string {
   const headers = [
-    'TradeNumber', 'Date', 'Direction', 'Entry', 'StopLoss', 'TakeProfit',
+    'TradeNumber', 'Date', 'Symbol', 'Direction', 'Entry', 'StopLoss', 'TakeProfit',
     'ClosePrice', 'LotSize', 'SwapFee', 'BalanceBefore', 'BalanceAfter',
     'Result', 'RMultiple', 'Notes',
   ];
@@ -524,6 +689,7 @@ export function tradesToCSV(trades: any[]): string {
       [
         t.tradeNumber,
         t.date instanceof Date ? t.date.toISOString() : t.date,
+        t.symbol ?? 'GOLD',
         t.direction, t.entry, t.stopLoss, t.takeProfit, t.closePrice,
         t.lotSize, t.swapFee, t.balanceBefore, t.balanceAfter,
         t.result, t.rMultiple, t.notes,

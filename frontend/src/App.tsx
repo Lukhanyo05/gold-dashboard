@@ -10,6 +10,12 @@ import { Calculator } from './pages/Calculator';
 import { Withdrawals } from './pages/Withdrawals';
 import { TaxCenter } from './pages/TaxCenter';
 import { Projection } from './pages/Projection';
+import { CalendarPage } from './pages/Calendar';
+import { Analytics } from './pages/Analytics';
+import { Playbooks } from './pages/Playbooks';
+import { Goals } from './pages/Goals';
+import { Market } from './pages/Market';
+import { RiskMentor } from './pages/RiskMentor';
 
 function App() {
   return (
@@ -26,6 +32,12 @@ function App() {
                   <Routes>
                     <Route path="/"            element={<Dashboard />} />
                     <Route path="/journal"     element={<Journal />} />
+                    <Route path="/calendar"    element={<CalendarPage />} />
+                    <Route path="/analytics"   element={<Analytics />} />
+                    <Route path="/playbooks"   element={<Playbooks />} />
+                    <Route path="/goals"       element={<Goals />} />
+                    <Route path="/market"      element={<Market />} />
+                    <Route path="/risk-mentor" element={<RiskMentor />} />
                     <Route path="/calculator"  element={<Calculator />} />
                     <Route path="/withdrawals" element={<Withdrawals />} />
                     <Route path="/tax"         element={<TaxCenter />} />
@@ -42,4 +54,4 @@ function App() {
   );
 }
 
-export default App;
+export default App;

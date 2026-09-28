@@ -5,6 +5,13 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { login, register } from '../api/client';
 
+// The backend only accepts registrations when ALLOW_REGISTRATION=true is
+// explicitly set (there's one shared account/dataset behind this app, not
+// per-user data), so the tab is hidden by default rather than offering a
+// signup that will just 403. Set VITE_ALLOW_REGISTRATION=true at build time
+// on the one occasion you need to create the real account.
+const REGISTRATION_ENABLED = import.meta.env.VITE_ALLOW_REGISTRATION === 'true';
+
 export function Login() {
   const [tab, setTab] = useState(0);
   const [email, setEmail] = useState('');
@@ -54,10 +61,14 @@ export function Login() {
           {tab === 0 ? 'Sign in to your dashboard' : 'Create your account'}
         </Typography>
 
-        <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
-          <Tab label="Login" />
-          <Tab label="Register" />
-        </Tabs>
+        {REGISTRATION_ENABLED ? (
+          <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
+            <Tab label="Login" />
+            <Tab label="Register" />
+          </Tabs>
+        ) : (
+          <Box sx={{ mb: 3 }} />
+        )}
 
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
@@ -102,4 +113,4 @@ export function Login() {
       </Paper>
     </Box>
   );
-}
+}

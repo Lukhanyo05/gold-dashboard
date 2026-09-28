@@ -7,6 +7,7 @@ const TradeSchema = new Schema<ITrade>(
   {
     tradeNumber: { type: Number, required: true, unique: true },
     date: { type: Date, required: true, default: Date.now },
+    symbol: { type: String, enum: ['GOLD', 'ETHUSD'], required: true, default: 'GOLD' },
     direction: { type: String, enum: ['Buy', 'Sell'], required: true },
     entry: { type: Number, required: true },
     stopLoss: { type: Number, default: null },
@@ -23,10 +24,18 @@ const TradeSchema = new Schema<ITrade>(
     },
     rMultiple: { type: Number },
     notes: { type: String, trim: true, maxlength: 2000 },
+    tags: { type: [String], default: [] },
+    setup: { type: String, trim: true, maxlength: 100, default: null },
+    followedPlan: { type: Boolean, default: null },
+    mistakes: { type: [String], default: [] },
+    screenshot: { type: String, default: null },
   },
   { timestamps: true }
 );
 
 TradeSchema.index({ date: -1 });
+TradeSchema.index({ symbol: 1, date: -1 });
+TradeSchema.index({ tags: 1 });
+TradeSchema.index({ setup: 1 });
 
-export const Trade = model<ITrade>('Trade', TradeSchema);
+export const Trade = model<ITrade>('Trade', TradeSchema);

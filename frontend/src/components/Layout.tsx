@@ -6,10 +6,16 @@ import {
 import {
   Dashboard as DashboardIcon,
   MenuBook as JournalIcon,
+  CalendarMonth as CalendarIcon,
+  Insights as AnalyticsIcon,
+  Checklist as PlaybookIcon,
   Calculate as CalculatorIcon,
   Savings as SavingsIcon,
   AccountBalance as TaxIcon,
   TrendingUp as ProjectionIcon,
+  Flag as GoalIcon,
+  Newspaper as NewsIcon,
+  Psychology as MentorIcon,
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getStoredUser } from '../api/client';
@@ -19,6 +25,12 @@ const DRAWER_WIDTH = 240;
 const navItems = [
   { label: 'Dashboard',   path: '/',            icon: <DashboardIcon /> },
   { label: 'Journal',     path: '/journal',     icon: <JournalIcon /> },
+  { label: 'Calendar',    path: '/calendar',    icon: <CalendarIcon /> },
+  { label: 'Analytics',   path: '/analytics',   icon: <AnalyticsIcon /> },
+  { label: 'Playbooks',   path: '/playbooks',   icon: <PlaybookIcon /> },
+  { label: 'Goals',       path: '/goals',       icon: <GoalIcon /> },
+  { label: 'Market News', path: '/market',      icon: <NewsIcon /> },
+  { label: 'Risk Mentor', path: '/risk-mentor', icon: <MentorIcon /> },
   { label: 'Calculator',  path: '/calculator',  icon: <CalculatorIcon /> },
   { label: 'Withdrawals', path: '/withdrawals', icon: <SavingsIcon /> },
   { label: 'Tax Center',  path: '/tax',         icon: <TaxIcon /> },
@@ -118,4 +130,4 @@ export function Layout({ children }: { children: ReactNode }) {
       </Box>
     </Box>
   );
-}
+}
