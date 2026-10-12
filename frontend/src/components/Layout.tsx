@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   Box, Drawer, List, ListItemButton, ListItemIcon, ListItemText,
-  AppBar, Toolbar, Typography, Divider, Button,
+  AppBar, Toolbar, Typography, Divider, Button, IconButton, useTheme, useMediaQuery,
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -16,6 +16,7 @@ import {
   Flag as GoalIcon,
   Newspaper as NewsIcon,
   Psychology as MentorIcon,
+  Menu as MenuIcon,
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getStoredUser } from '../api/client';
@@ -41,6 +42,9 @@ export function Layout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const user = getStoredUser();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -48,24 +52,79 @@ export function Layout({ children }: { children: ReactNode }) {
     window.location.href = '/login';
   };
 
+  const handleNavClick = (path: string) => {
+    navigate(path);
+    if (isMobile) setMobileOpen(false);
+  };
+
+  const drawerContent = (
+    <>
+      <Toolbar sx={{ px: 2 }}>
+        <Typography variant="h6" sx={{ fontWeight: 700 }}>
+          Portfolio
+        </Typography>
+      </Toolbar>
+      <Divider />
+      <List>
+        {navItems.map((item) => (
+          <ListItemButton
+            key={item.path}
+            selected={pathname === item.path}
+            onClick={() => handleNavClick(item.path)}
+            sx={{
+              mx: 1,
+              borderRadius: 1,
+              '&.Mui-selected': {
+                bgcolor: 'rgba(212, 175, 55, 0.12)',
+                color: 'primary.main',
+                '& .MuiListItemIcon-root': { color: 'primary.main' },
+              },
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
+            <ListItemText primary={item.label} />
+          </ListItemButton>
+        ))}
+      </List>
+    </>
+  );
+
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       <AppBar
         position="fixed"
         elevation={0}
         sx={{
-          width: `calc(100% - ${DRAWER_WIDTH}px)`,
-          ml: `${DRAWER_WIDTH}px`,
+          width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
+          ml: { md: `${DRAWER_WIDTH}px` },
           bgcolor: 'background.paper',
           borderBottom: '1px solid #21262D',
         }}
       >
-        <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Typography variant="h6" sx={{ color: 'primary.main' }}>
-            🥇 Gold Trading Company
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="body2" color="text.secondary">
+        <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+            <IconButton
+              color="inherit"
+              edge="start"
+              onClick={() => setMobileOpen(true)}
+              sx={{ display: { md: 'none' } }}
+            >
+              <MenuIcon />
+            </IconButton>
+            <Typography
+              variant="h6"
+              noWrap
+              sx={{ color: 'primary.main', fontSize: { xs: '1rem', sm: '1.25rem' } }}
+            >
+              🥇 Gold Trading Company
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ display: { xs: 'none', sm: 'block' } }}
+            >
               {user?.email ?? ''}
             </Typography>
             <Button size="small" onClick={handleLogout}>
@@ -75,11 +134,14 @@ export function Layout({ children }: { children: ReactNode }) {
         </Toolbar>
       </AppBar>
 
+      {/* Mobile: temporary drawer that overlays and closes after navigating */}
       <Drawer
-        variant="permanent"
+        variant="temporary"
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        ModalProps={{ keepMounted: true }}
         sx={{
-          width: DRAWER_WIDTH,
-          flexShrink: 0,
+          display: { xs: 'block', md: 'none' },
           '& .MuiDrawer-paper': {
             width: DRAWER_WIDTH,
             boxSizing: 'border-box',
@@ -88,41 +150,35 @@ export function Layout({ children }: { children: ReactNode }) {
           },
         }}
       >
-        <Toolbar sx={{ px: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            Portfolio
-          </Typography>
-        </Toolbar>
-        <Divider />
-        <List>
-          {navItems.map((item) => (
-            <ListItemButton
-              key={item.path}
-              selected={pathname === item.path}
-              onClick={() => navigate(item.path)}
-              sx={{
-                mx: 1,
-                borderRadius: 1,
-                '&.Mui-selected': {
-                  bgcolor: 'rgba(212, 175, 55, 0.12)',
-                  color: 'primary.main',
-                  '& .MuiListItemIcon-root': { color: 'primary.main' },
-                },
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.label} />
-            </ListItemButton>
-          ))}
-        </List>
+        {drawerContent}
+      </Drawer>
+
+      {/* Desktop: permanent drawer, always visible */}
+      <Drawer
+        variant="permanent"
+        sx={{
+          width: DRAWER_WIDTH,
+          flexShrink: 0,
+          display: { xs: 'none', md: 'block' },
+          '& .MuiDrawer-paper': {
+            width: DRAWER_WIDTH,
+            boxSizing: 'border-box',
+            bgcolor: 'background.paper',
+            borderRight: '1px solid #21262D',
+          },
+        }}
+      >
+        {drawerContent}
       </Drawer>
 
       <Box
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
-          width: `calc(100% - ${DRAWER_WIDTH}px)`,
+          p: { xs: 2, sm: 3 },
+          width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
+          maxWidth: '100%',
+          overflowX: 'hidden',
           mt: 8,
         }}
       >
@@ -130,4 +186,4 @@ export function Layout({ children }: { children: ReactNode }) {
       </Box>
     </Box>
   );
-}
+}
