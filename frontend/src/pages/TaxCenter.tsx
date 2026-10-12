@@ -65,7 +65,7 @@ export function TaxCenter() {
                   display: 'flex',
                   justifyContent: 'space-between',
                   py: 1,
-                  borderBottom: '1px solid #21262D',
+                  borderBottom: '1px solid #E6D9BC',
                 }}
               >
                 <Typography variant="body2">{band}</Typography>

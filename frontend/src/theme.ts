@@ -1,33 +1,33 @@
 import { createTheme, alpha } from '@mui/material/styles';
 
-// A private ledger, not a dev-tool dashboard: warm, umber-toned darks
-// instead of the flat blue-black of a typical SaaS theme, with an antique
-// (not neon) gold as the single accent — this app's own stated identity
-// (🥇 Gold Trading Company), not a generic palette pick.
-const gold = '#C9A24B';
-const goldDim = '#8A6E2F';
-const goldLight = '#E0C57E';
-const bgVoid = '#140F0A';
-const bgPanel = '#1C160F';
-const borderColor = '#332818';
-const parchment = '#EDE3CC';
-const textSecondary = '#AC9C7C';
+// A private ledger, not a dev-tool dashboard: warm cream/parchment tones
+// instead of a stark white admin panel, with an antique (not neon) gold
+// as the single accent — this app's own stated identity (🥇 Gold Trading
+// Company), not a generic palette pick.
+const gold = '#9C7A2E';       // deeper antique gold — enough contrast for text/icons on a light ground
+const goldFill = '#C9A24B';   // lighter gold, used where it sits as a filled swatch (e.g. button backgrounds)
+const goldLight = '#E4CE94';
+const bgVoid = '#FAF5E9';     // warm parchment
+const bgPanel = '#FFFFFF';
+const borderColor = '#E6D9BC';
+const textPrimary = '#2B2013';
+const textSecondary = '#6E5F45';
 
 export const theme = createTheme({
   palette: {
-    mode: 'dark',
-    primary: { main: gold, dark: goldDim, light: goldLight, contrastText: '#1A1409' },
-    secondary: { main: '#7FA6C9' },
-    success: { main: '#5CB85C' },
-    error: { main: '#E2574C' },
-    warning: { main: '#D99A3D' },
-    info: { main: '#7FA6C9' },
+    mode: 'light',
+    primary: { main: gold, dark: '#7A5E20', light: goldLight },
+    secondary: { main: '#3B6E96' },
+    success: { main: '#2E7D32' },
+    error: { main: '#C62828' },
+    warning: { main: '#9C6B16' },
+    info: { main: '#3B6E96' },
     background: {
       default: bgVoid,
       paper: bgPanel,
     },
     text: {
-      primary: parchment,
+      primary: textPrimary,
       secondary: textSecondary,
     },
     divider: borderColor,
@@ -51,8 +51,8 @@ export const theme = createTheme({
         body: {
           backgroundColor: bgVoid,
           backgroundImage:
-            `radial-gradient(ellipse 1100px 760px at 12% -8%, ${alpha(gold, 0.08)}, transparent 60%), ` +
-            `radial-gradient(ellipse 900px 680px at 105% 0%, ${alpha('#7FA6C9', 0.05)}, transparent 55%)`,
+            `radial-gradient(ellipse 1100px 760px at 12% -8%, ${alpha(goldFill, 0.10)}, transparent 60%), ` +
+            `radial-gradient(ellipse 900px 680px at 105% 0%, ${alpha('#3B6E96', 0.05)}, transparent 55%)`,
           backgroundAttachment: 'fixed',
           backgroundRepeat: 'no-repeat',
         },
@@ -62,9 +62,10 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           backgroundColor: bgPanel,
-          backgroundImage: `linear-gradient(180deg, ${alpha('#FFFFFF', 0.03)}, transparent 140px)`,
+          backgroundImage: 'none',
           border: `1px solid ${borderColor}`,
           borderRadius: 14,
+          boxShadow: '0 1px 2px rgba(43,32,19,0.04), 0 2px 10px rgba(43,32,19,0.04)',
         },
       },
     },
@@ -81,11 +82,11 @@ export const theme = createTheme({
           boxShadow: 'none',
           '&:hover': {
             transform: 'translateY(-1px)',
-            boxShadow: `0 8px 20px ${alpha(gold, 0.3)}`,
+            boxShadow: `0 8px 20px ${alpha(gold, 0.28)}`,
           },
           '&:active': {
             transform: 'translateY(0)',
-            boxShadow: `0 2px 8px ${alpha(gold, 0.25)}`,
+            boxShadow: `0 2px 8px ${alpha(gold, 0.22)}`,
           },
         },
         outlined: {

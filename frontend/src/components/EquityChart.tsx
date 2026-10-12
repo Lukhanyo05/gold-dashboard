@@ -28,7 +28,7 @@ export function EquityChart({ trades, startingBalance }: Props) {
         style={{
           padding: 40,
           textAlign: 'center',
-          color: '#8B949E',
+          color: '#6E5F45',
         }}
       >
         No closed trades yet. Add and close a trade to see your equity curve.
@@ -39,14 +39,15 @@ export function EquityChart({ trades, startingBalance }: Props) {
   return (
     <ResponsiveContainer width="100%" height={280}>
       <LineChart data={data}>
-        <CartesianGrid stroke="#21262D" strokeDasharray="3 3" />
-        <XAxis dataKey="label" stroke="#8B949E" fontSize={12} />
-        <YAxis stroke="#8B949E" fontSize={12} domain={['auto', 'auto']} />
+        <CartesianGrid stroke="#E6D9BC" strokeDasharray="3 3" />
+        <XAxis dataKey="label" stroke="#6E5F45" fontSize={12} />
+        <YAxis stroke="#6E5F45" fontSize={12} domain={['auto', 'auto']} />
         <Tooltip
           contentStyle={{
-            background: '#161B22',
-            border: '1px solid #21262D',
+            background: '#FFFFFF',
+            border: '1px solid #E6D9BC',
             borderRadius: 8,
+            color: '#2B2013',
           }}
           formatter={(value) => {
             const num = typeof value === 'number' ? value : Number(value);
@@ -56,9 +57,9 @@ export function EquityChart({ trades, startingBalance }: Props) {
         <Line
           type="monotone"
           dataKey="balance"
-          stroke="#D4AF37"
+          stroke="#9C7A2E"
           strokeWidth={2.5}
-          dot={{ fill: '#D4AF37', r: 4 }}
+          dot={{ fill: '#9C7A2E', r: 4 }}
           activeDot={{ r: 6 }}
         />
       </LineChart>

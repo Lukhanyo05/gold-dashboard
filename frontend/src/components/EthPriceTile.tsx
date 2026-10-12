@@ -7,7 +7,7 @@ export function EthPriceTile() {
   return (
     <PriceTile
       label="Live ETH · ETH/USD"
-      accent="#8A6DFF"
+      accent="#6B4FD6"
       price={price?.price}
       updatedAt={price?.updatedAt}
       sentiment={price?.sentiment}

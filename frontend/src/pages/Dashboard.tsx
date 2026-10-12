@@ -377,7 +377,7 @@ export function Dashboard() {
                 ? `~${(months / 12).toFixed(1)} years, at your trailing average P/L`
                 : 'Need closed trades to project'
             }
-            accent="#D4AF37"
+            accent="#9C7A2E"
           />
         </Grid>
       </Grid>
@@ -457,7 +457,7 @@ export function Dashboard() {
                       flex: 1,
                       height: 36,
                       borderRadius: 1,
-                      bgcolor: d.netPnL > 0 ? 'rgba(76,175,80,0.25)' : d.netPnL < 0 ? 'rgba(244,67,54,0.25)' : 'rgba(255,255,255,0.05)',
+                      bgcolor: d.netPnL > 0 ? 'rgba(46,125,50,0.16)' : d.netPnL < 0 ? 'rgba(198,40,40,0.14)' : 'rgba(43,32,19,0.045)',
                       border: '1px solid',
                       borderColor: d.netPnL > 0 ? 'success.main' : d.netPnL < 0 ? 'error.main' : 'divider',
                     }}

@@ -114,7 +114,7 @@ export function Layout({ children }: { children: ReactNode }) {
           width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
           ml: { md: `${DRAWER_WIDTH}px` },
           bgcolor: 'background.paper',
-          borderBottom: '1px solid #332818',
+          borderBottom: '1px solid #E6D9BC',
         }}
       >
         <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
@@ -162,7 +162,7 @@ export function Layout({ children }: { children: ReactNode }) {
             width: DRAWER_WIDTH,
             boxSizing: 'border-box',
             bgcolor: 'background.paper',
-            borderRight: '1px solid #332818',
+            borderRight: '1px solid #E6D9BC',
           },
         }}
       >
@@ -180,7 +180,7 @@ export function Layout({ children }: { children: ReactNode }) {
             width: DRAWER_WIDTH,
             boxSizing: 'border-box',
             bgcolor: 'background.paper',
-            borderRight: '1px solid #332818',
+            borderRight: '1px solid #E6D9BC',
           },
         }}
       >

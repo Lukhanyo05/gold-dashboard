@@ -163,14 +163,14 @@ export function Analytics() {
                 ) : (
                   <ResponsiveContainer width="100%" height={260}>
                     <LineChart data={equityData}>
-                      <CartesianGrid stroke="#21262D" strokeDasharray="3 3" />
-                      <XAxis dataKey="label" stroke="#8B949E" fontSize={12} />
-                      <YAxis stroke="#8B949E" fontSize={12} domain={['auto', 'auto']} />
+                      <CartesianGrid stroke="#E6D9BC" strokeDasharray="3 3" />
+                      <XAxis dataKey="label" stroke="#6E5F45" fontSize={12} />
+                      <YAxis stroke="#6E5F45" fontSize={12} domain={['auto', 'auto']} />
                       <Tooltip
-                        contentStyle={{ background: '#161B22', border: '1px solid #21262D', borderRadius: 8 }}
+                        contentStyle={{ background: '#FFFFFF', border: '1px solid #E6D9BC', borderRadius: 8, color: '#2B2013' }}
                         formatter={(v) => [`$${Number(v).toFixed(2)}`, 'Balance']}
                       />
-                      <Line type="monotone" dataKey="balance" stroke="#D4AF37" strokeWidth={2.5} dot={false} />
+                      <Line type="monotone" dataKey="balance" stroke="#9C7A2E" strokeWidth={2.5} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 )}
@@ -185,14 +185,14 @@ export function Analytics() {
                 ) : (
                   <ResponsiveContainer width="100%" height={220}>
                     <BarChart data={byWeekday}>
-                      <CartesianGrid stroke="#21262D" strokeDasharray="3 3" />
-                      <XAxis dataKey="key" stroke="#8B949E" fontSize={12} />
-                      <YAxis stroke="#8B949E" fontSize={12} />
+                      <CartesianGrid stroke="#E6D9BC" strokeDasharray="3 3" />
+                      <XAxis dataKey="key" stroke="#6E5F45" fontSize={12} />
+                      <YAxis stroke="#6E5F45" fontSize={12} />
                       <Tooltip
-                        contentStyle={{ background: '#161B22', border: '1px solid #21262D', borderRadius: 8 }}
+                        contentStyle={{ background: '#FFFFFF', border: '1px solid #E6D9BC', borderRadius: 8, color: '#2B2013' }}
                         formatter={(v) => [`$${Number(v).toFixed(2)}`, 'Net P&L']}
                       />
-                      <Bar dataKey="netPnL" fill="#D4AF37" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="netPnL" fill="#9C7A2E" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}

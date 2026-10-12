@@ -124,12 +124,12 @@ export function CalendarPage() {
   const cellColor = (pnl: number) => {
     if (pnl > 0) return 'rgba(76, 175, 80, 0.18)';
     if (pnl < 0) return 'rgba(244, 67, 54, 0.18)';
-    return 'rgba(255,255,255,0.03)';
+    return 'rgba(43,32,19,0.035)';
   };
   const cellBorder = (pnl: number) => {
     if (pnl > 0) return 'rgba(76, 175, 80, 0.6)';
     if (pnl < 0) return 'rgba(244, 67, 54, 0.6)';
-    return 'rgba(255,255,255,0.08)';
+    return 'rgba(43,32,19,0.12)';
   };
 
   return (
@@ -186,7 +186,7 @@ export function CalendarPage() {
                         height: 76,
                         borderRadius: 1,
                         border: '1px solid',
-                        borderColor: day ? cellBorder(day.netPnL) : 'rgba(255,255,255,0.08)',
+                        borderColor: day ? cellBorder(day.netPnL) : 'rgba(43,32,19,0.12)',
                         bgcolor: day ? cellColor(day.netPnL) : 'transparent',
                         p: 0.75,
                         cursor: 'pointer',
