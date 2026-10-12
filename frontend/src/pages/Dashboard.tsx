@@ -185,14 +185,14 @@ export function Dashboard() {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2, mb: 3 }}>
         <Box>
           <Typography variant="h4" gutterBottom>Dashboard</Typography>
           <Typography variant="body2" color="text.secondary">
             Live snapshot of your trading company capital.
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <Button component={RouterLink} to="/calendar" size="small" variant="outlined">
             Calendar
           </Button>

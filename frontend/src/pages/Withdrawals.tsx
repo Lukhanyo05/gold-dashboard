@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   Box, Paper, Typography, Button, Grid, TextField, MenuItem,
   Table, TableBody, TableCell, TableHead, TableRow, Chip, Alert,
+  TableContainer,
 } from '@mui/material';
 import type { Withdrawal, Account, WithdrawalAllocation } from '../api/client';
 import { getWithdrawals, createWithdrawal, getAccount } from '../api/client';
@@ -171,6 +172,7 @@ export function Withdrawals() {
 
         <Grid size={{ xs: 12, md: 8 }}>
           <Paper>
+            <TableContainer sx={{ overflowX: 'auto' }}>
             <Table size="small">
               <TableHead>
                 <TableRow>
@@ -210,9 +212,10 @@ export function Withdrawals() {
                 )}
               </TableBody>
             </Table>
+            </TableContainer>
           </Paper>
         </Grid>
       </Grid>
     </Box>
   );
-}
+}

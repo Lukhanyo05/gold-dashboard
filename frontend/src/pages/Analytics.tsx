@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   Box, Typography, Grid, Paper, TextField, MenuItem, CircularProgress, Alert,
   Table, TableBody, TableCell, TableHead, TableRow,
+  TableContainer,
 } from '@mui/material';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -52,14 +53,14 @@ export function Analytics() {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, mb: 3 }}>
         <Box>
           <Typography variant="h4">Analytics</Typography>
           <Typography variant="body2" color="text.secondary">
             Performance breakdown across your closed trades.
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
           <TextField
             select
             size="small"
@@ -258,6 +259,7 @@ export function Analytics() {
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                     Overtrading usually shows up as a falling win rate the more trades you take in a single day.
                   </Typography>
+                  <TableContainer sx={{ overflowX: 'auto' }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
@@ -276,6 +278,7 @@ export function Analytics() {
                       ))}
                     </TableBody>
                   </Table>
+                  </TableContainer>
                 </Paper>
               </Grid>
             </Grid>
@@ -288,6 +291,7 @@ export function Analytics() {
 
 function GroupTable({ rows }: { rows: AnalyticsSummary['bySymbol'] }) {
   return (
+    <TableContainer sx={{ overflowX: 'auto' }}>
     <Table size="small">
       <TableHead>
         <TableRow>
@@ -312,5 +316,6 @@ function GroupTable({ rows }: { rows: AnalyticsSummary['bySymbol'] }) {
           ))}
       </TableBody>
     </Table>
+    </TableContainer>
   );
 }

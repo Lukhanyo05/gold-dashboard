@@ -4,6 +4,7 @@ import {
   DialogContent, DialogActions, Button, List, ListItem, ListItemText, Chip,
   CircularProgress, TextField, ToggleButton, ToggleButtonGroup, Table, TableBody,
   TableCell, TableHead, TableRow,
+  TableContainer,
 } from '@mui/material';
 import { ChevronLeft, ChevronRight } from '@mui/icons-material';
 import type { DayPnL, Trade, DailyJournalEntry, MoodPnLBucket } from '../api/client';
@@ -133,7 +134,7 @@ export function CalendarPage() {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, mb: 3 }}>
         <Box>
           <Typography variant="h4">Calendar</Typography>
           <Typography variant="body2" color="text.secondary">
@@ -310,6 +311,7 @@ export function CalendarPage() {
           <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
             MOOD vs. P&amp;L (all-time)
           </Typography>
+          <TableContainer sx={{ overflowX: 'auto' }}>
           <Table size="small">
             <TableHead>
               <TableRow>
@@ -335,6 +337,7 @@ export function CalendarPage() {
               ))}
             </TableBody>
           </Table>
+          </TableContainer>
         </Paper>
       )}
     </Box>

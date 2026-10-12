@@ -5,6 +5,7 @@ import {
   DialogContent, DialogActions, TextField, MenuItem, Grid, Alert,
   CircularProgress, Snackbar, Autocomplete, ToggleButton, ToggleButtonGroup,
   FormControlLabel, Checkbox, FormGroup,
+  TableContainer,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -305,6 +306,8 @@ export function Journal() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 2,
           mb: 3,
         }}
       >
@@ -314,7 +317,7 @@ export function Journal() {
             Log your trades. Lot size auto-computes from balance, risk %, and SL.
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <TextField
             select
             size="small"
@@ -396,6 +399,7 @@ export function Journal() {
         </Box>
       ) : (
         <Paper>
+          <TableContainer sx={{ overflowX: 'auto' }}>
           <Table size="small">
             <TableHead>
               <TableRow>
@@ -514,6 +518,7 @@ export function Journal() {
               )}
             </TableBody>
           </Table>
+          </TableContainer>
         </Paper>
       )}
 
@@ -923,4 +928,4 @@ export function Journal() {
       />
     </Box>
   );
-}
+}

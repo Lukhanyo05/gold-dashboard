@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   Box, Paper, Typography, TextField, Grid, Table, TableBody,
   TableCell, TableHead, TableRow, Divider,
+  TableContainer,
 } from '@mui/material';
 import type { Account, ProjectionResult } from '../api/client';
 import { getAccount, getProjection } from '../api/client';
@@ -153,6 +154,7 @@ export function Projection() {
 
         <Grid size={{ xs: 12, md: 8 }}>
           <Paper sx={{ maxHeight: 500, overflow: 'auto' }}>
+            <TableContainer sx={{ overflowX: 'auto' }}>
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
@@ -183,6 +185,7 @@ export function Projection() {
                 ))}
               </TableBody>
             </Table>
+            </TableContainer>
           </Paper>
         </Grid>
       </Grid>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   Box, Paper, Typography, TextField, Grid, Table, TableBody,
   TableCell, TableHead, TableRow,
+  TableContainer,
 } from '@mui/material';
 import type { Account, LotSizingResult } from '../api/client';
 import { getAccount, calcLotSize } from '../api/client';
@@ -104,6 +105,7 @@ export function Calculator() {
           <Paper sx={{ p: 3, mt: 2 }}>
             {/* Fix: Replace 'mb={2}' with sx */}
             <Typography variant="h6" sx={{ mb: 2 }}>Points → $ P/L</Typography>
+            <TableContainer sx={{ overflowX: 'auto' }}>
             <Table size="small">
               <TableHead>
                 <TableRow>
@@ -122,6 +124,7 @@ export function Calculator() {
                 ))}
               </TableBody>
             </Table>
+            </TableContainer>
           </Paper>
         </Grid>
 
@@ -222,4 +225,4 @@ export function Calculator() {
       </Grid>
     </Box>
   );
-}
+}
