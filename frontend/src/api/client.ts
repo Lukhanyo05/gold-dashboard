@@ -255,6 +255,15 @@ export interface MacroEvent {
   note: string;
 }
 
+export interface ForexFactoryEvent {
+  title: string;
+  country: string;
+  date: string;
+  impact: 'High' | 'Medium' | 'Low' | 'Holiday';
+  forecast: string;
+  previous: string;
+}
+
 export interface LotSizingResult {
   lot: number;
   riskedUSD: number;
@@ -428,6 +437,9 @@ export const getGoldNews = () =>
 export const getMacroEvents = (months = 3) =>
   api.get<{ events: MacroEvent[] }>('/events', { params: { months } }).then((r) => r.data.events);
 
+export const getForexFactoryCalendar = () =>
+  api.get<{ events: ForexFactoryEvent[]; stale?: boolean }>('/events/calendar').then((r) => r.data);
+
 // ---------- Withdrawals ----------
 export const getWithdrawals = () =>
   api.get<Withdrawal[]>('/withdrawals').then((r) => r.data);
@@ -522,4 +534,4 @@ export async function importTradesFile(
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return data;
-}
+}

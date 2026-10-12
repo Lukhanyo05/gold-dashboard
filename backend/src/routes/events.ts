@@ -85,4 +85,112 @@ router.get('/', async (req, res) => {
   }
 });
 
+/**
+ * Forex Factory's weekly economic calendar — the full high/medium/low
+ * impact calendar (CPI, PMIs, central bank speeches, every currency), not
+ * just the two hardcoded USD events above. Forex Factory doesn't publish
+ * an official API; this is the public JSON feed their own calendar widget
+ * loads client-side (no key, no auth). It's widely relied on by other
+ * trading tools, but it's undocumented and could change shape or go away
+ * without notice — every field is defensively checked below, and a feed
+ * failure degrades to the last good cache (or an empty list) rather than
+ * breaking the page.
+ */
+const FF_CALENDAR_URL = 'https://nfs.faireconomy.media/ff_calendar_thisweek.json';
+
+interface ForexFactoryEvent {
+  title: string;
+  country: string; // currency code, e.g. "USD"
+  date: string; // ISO timestamp
+  impact: 'High' | 'Medium' | 'Low' | 'Holiday';
+  forecast: string;
+  previous: string;
+}
+
+let ffCache: { events: ForexFactoryEvent[]; fetchedAt: number } | null = null;
+const FF_CACHE_MS = 30 * 60 * 1000; // 30 minutes
+
+function isValidImpact(v: unknown): v is ForexFactoryEvent['impact'] {
+  return v === 'High' || v === 'Medium' || v === 'Low' || v === 'Holiday';
+}
+
+async function fetchForexFactoryCalendar(): Promise<ForexFactoryEvent[]> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(FF_CALENDAR_URL, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; GoldTradingCompanyJournal/1.0)' },
+    });
+    if (!res.ok) throw new Error(`Forex Factory feed returned ${res.status}`);
+    const raw = (await res.json()) as unknown;
+    if (!Array.isArray(raw)) throw new Error('Unexpected Forex Factory feed shape');
+
+    const events: ForexFactoryEvent[] = [];
+    for (const item of raw) {
+      if (
+        item && typeof item === 'object' &&
+        typeof (item as any).title === 'string' &&
+        typeof (item as any).country === 'string' &&
+        typeof (item as any).date === 'string' &&
+        isValidImpact((item as any).impact)
+      ) {
+        const i = item as any;
+        events.push({
+          title: i.title,
+          country: i.country,
+          date: i.date,
+          impact: i.impact,
+          forecast: typeof i.forecast === 'string' ? i.forecast : '',
+          previous: typeof i.previous === 'string' ? i.previous : '',
+        });
+      }
+    }
+    return events;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+router.get('/calendar', async (req, res) => {
+  try {
+    const force = req.query.refresh === '1';
+    const currencyParam = (req.query.currency as string | undefined)?.toUpperCase();
+    const includeLow = req.query.impact === 'all';
+
+    let events: ForexFactoryEvent[];
+    let stale = false;
+
+    if (!force && ffCache && Date.now() - ffCache.fetchedAt < FF_CACHE_MS) {
+      events = ffCache.events;
+    } else {
+      try {
+        events = await fetchForexFactoryCalendar();
+        ffCache = { events, fetchedAt: Date.now() };
+      } catch (err) {
+        if (ffCache) {
+          events = ffCache.events;
+          stale = true;
+        } else {
+          return res.status(502).json({ error: 'Could not reach the Forex Factory calendar feed', details: (err as Error).message });
+        }
+      }
+    }
+
+    const now = Date.now();
+    const filtered = events
+      .filter((e) => (currencyParam ? e.country === currencyParam : e.country === 'USD'))
+      .filter((e) => includeLow || e.impact === 'High' || e.impact === 'Medium')
+      .filter((e) => {
+        const t = Date.parse(e.date);
+        return !isNaN(t) && t >= now - 24 * 60 * 60 * 1000; // keep today onward (small lookback for same-day-earlier releases)
+      })
+      .sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
+
+    res.json({ events: filtered, stale, source: 'forexfactory' });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 export default router;
