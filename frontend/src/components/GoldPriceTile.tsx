@@ -7,7 +7,7 @@ export function GoldPriceTile() {
   return (
     <PriceTile
       label="Live Gold · XAU/USD"
-      accent="#FFC107"
+      accent="#D9B35C"
       price={price?.price}
       updatedAt={price?.updatedAt}
       sentiment={price?.sentiment}

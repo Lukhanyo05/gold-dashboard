@@ -73,11 +73,27 @@ export function Layout({ children }: { children: ReactNode }) {
             onClick={() => handleNavClick(item.path)}
             sx={{
               mx: 1,
-              borderRadius: 1,
+              borderRadius: 1.5,
+              position: 'relative',
+              transition: 'background-color 150ms ease, color 150ms ease',
+              '&:hover': {
+                bgcolor: 'rgba(201, 162, 75, 0.08)',
+              },
               '&.Mui-selected': {
-                bgcolor: 'rgba(212, 175, 55, 0.12)',
+                bgcolor: 'rgba(201, 162, 75, 0.14)',
                 color: 'primary.main',
+                '&:hover': { bgcolor: 'rgba(201, 162, 75, 0.18)' },
                 '& .MuiListItemIcon-root': { color: 'primary.main' },
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  left: 0,
+                  top: '22%',
+                  bottom: '22%',
+                  width: 3,
+                  borderRadius: 4,
+                  bgcolor: 'primary.main',
+                },
               },
             }}
           >
@@ -98,7 +114,7 @@ export function Layout({ children }: { children: ReactNode }) {
           width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
           ml: { md: `${DRAWER_WIDTH}px` },
           bgcolor: 'background.paper',
-          borderBottom: '1px solid #21262D',
+          borderBottom: '1px solid #332818',
         }}
       >
         <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
@@ -146,7 +162,7 @@ export function Layout({ children }: { children: ReactNode }) {
             width: DRAWER_WIDTH,
             boxSizing: 'border-box',
             bgcolor: 'background.paper',
-            borderRight: '1px solid #21262D',
+            borderRight: '1px solid #332818',
           },
         }}
       >
@@ -164,7 +180,7 @@ export function Layout({ children }: { children: ReactNode }) {
             width: DRAWER_WIDTH,
             boxSizing: 'border-box',
             bgcolor: 'background.paper',
-            borderRight: '1px solid #21262D',
+            borderRight: '1px solid #332818',
           },
         }}
       >
